@@ -8,20 +8,23 @@ const authRoutes = require('./routes/auth');
 const reportRoutes = require('./routes/reports');
 const quizRoutes = require('./routes/quiz');
 
+const app = express();
+
+// Make sure JWT_SECRET exists
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET is missing.');
 }
 
-const app = express();
+// --------------------------------------------------
+// CORS
+// --------------------------------------------------
 
-const allowedOrigin =
-  process.env.FRONTEND_URL || 'https://cybersurakshain.vercel.app';
+const allowedOrigin = process.env.FRONTEND_URL;
 
-// ---------- CORS ----------
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  if (origin === allowedOrigin) {
+  if (allowedOrigin && origin === allowedOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader(
@@ -41,32 +44,46 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---------- Middleware ----------
+// --------------------------------------------------
+// Middleware
+// --------------------------------------------------
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ---------- Uploads ----------
+// --------------------------------------------------
+// Uploaded files
+// --------------------------------------------------
+
 app.use(
   '/uploads',
   express.static(path.join(__dirname, 'uploads'))
 );
 
-// ---------- API ----------
+// --------------------------------------------------
+// API Routes
+// --------------------------------------------------
+
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/quiz', quizRoutes);
 
-// ---------- Health ----------
-app.get('/api/health', async (_, res) => {
+// --------------------------------------------------
+// Database Health Check
+// --------------------------------------------------
+
+app.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
+
     res.json({
       ok: true,
       database: true
     });
   } catch (error) {
-    console.error(error);
+    console.error('Database connection error:', error);
+
     res.status(500).json({
       ok: false,
       database: false
@@ -74,14 +91,26 @@ app.get('/api/health', async (_, res) => {
   }
 });
 
-// ---------- Frontend ----------
-app.use(express.static(path.join(__dirname, 'public')));
+// --------------------------------------------------
+// Frontend
+// --------------------------------------------------
 
-app.get('*', (_, res) => {
+app.use(
+  express.static(path.join(__dirname, 'public'))
+);
+
+app.get('*', (req, res) => {
   res.sendFile(
     path.join(__dirname, 'public', 'index.html')
   );
 });
 
-// ---------- Vercel ----------
-module.exports = app;
+// --------------------------------------------------
+// Render Server
+// --------------------------------------------------
+
+const port = Number(process.env.PORT || 10000);
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Cyber Suraksha running on port ${port}`);
+});
