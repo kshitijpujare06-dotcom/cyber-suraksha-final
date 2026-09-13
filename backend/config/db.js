@@ -10,17 +10,13 @@ const pool = mysql.createPool({
 
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-
   charset: 'utf8mb4',
 
-  ...(process.env.DB_SSL === 'true'
-    ? {
-        ssl: {
-          rejectUnauthorized: false
-        }
-      }
-    : {})
+  // Layerbase requires secure TLS connections
+  ssl: {},
+
+  // Layerbase may take time to wake from hibernation
+  connectTimeout: 30000
 });
 
 module.exports = pool;
